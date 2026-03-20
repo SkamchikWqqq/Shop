@@ -1,6 +1,13 @@
 import os
+import requests
 from flask import Flask
 from threading import Thread
+import telegram
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from aiogram.filters import CommandStart
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
 
 app = Flask('')
 
@@ -13,19 +20,6 @@ def run():
     app.run(host='0.0.0.0', port=port)  # Запускаем Flask на этом порту
 
 Thread(target=run).start()
-import asyncio
-
-import aiosqlite
-
-from aiogram import Bot, Dispatcher, types, F
-
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
-
-from aiogram.filters import CommandStart
-
-from aiogram.fsm.state import State, StatesGroup
-
-from aiogram.fsm.context import FSMContext
 
 # Ваш Telegram-бот
 TOKEN = '8798655968:AAEGVzmu2RPbI2z6UqBeuUjZQWkTuWbzGqM'
@@ -74,13 +68,13 @@ def create_payment_link(amount, currency, order_id):
         return f"Ошибка: {response_json.get('error')}"
 
 # Функция для обработки команды /start
-def start(update, context):
-    update.message.reply_text('Привет! Я онлайн.')
+async def start(message: types.Message):
+    await message.reply('Привет! Я онлайн.')
 
 # Функция для обработки нажатий на кнопки
-def button(update, context):
-    query = update.callback_query
-    query.answer()
+async def button(callback_query: CallbackQuery):
+    query = callback_query
+    await query.answer()
     
     if query.data == 'catalog':
         keyboard = [
@@ -90,12 +84,12 @@ def button(update, context):
             [InlineKeyboardButton("Разное", callback_data='misc')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        query.edit_message_text(text="Выберите категорию:", reply_markup=reply_markup)
+        await query.edit_message_text(text="Выберите категорию:", reply_markup=reply_markup)
 
 # Функция для обработки выбранного товара и отправки ссылки на оплату с изображением
-def process_payment(update, context):
-    query = update.callback_query
-    query.answer()
+async def process_payment(callback_query: CallbackQuery):
+    query = callback_query
+    await query.answer()
 
     # Получаем название товара и цену в USD
     product = query.data.split('_')[0]  # Например 'pрoб1v_user'
@@ -111,8 +105,8 @@ def process_payment(update, context):
     payment_link = create_payment_link(btc_price, 'BTC', order_id)
 
     # Отправляем локальное изображение и ссылку на оплату
-    context.bot.send_photo(
-        chat_id=query.message.chat_id,  # ID чата
+    await bot.send_photo(
+        chat_id=query.message.chat.id,  # ID чата
         photo=open(image_path, 'rb'),  # Открываем локальное изображение
         caption=f"Вы выбрали товар: {product}\n"
                 f"Цена: {usd_price}$\n"
@@ -121,22 +115,25 @@ def process_payment(update, context):
     )
 
 # Установка Webhook для вашего бота
-def set_webhook():
-    bot.setWebhook(WEBHOOK_URL)
+# Убедитесь, что у вас правильно настроены webhook и сервер доступен для внешнего мира
+# Для этого вам нужно будет настроить сервер, что выходит за пределы этого примера
 
-def main():
-    global dispatcher
-    updater = Updater(TOKEN, use_context=True)
-    dispatcher = updater.dispatcher
+async def main():
+    # Создаем экземпляр Dispatcher
+    from aiogram import Dispatcher
+    dp = Dispatcher(bot)
 
-    # Добавляем обработчики команд
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CallbackQueryHandler(button))
-    dispatcher.add_handler(CallbackQueryHandler(process_payment, pattern='.*'))
+    # Регистрируем обработчики команд
+    dp.register_message_handler(start, commands=["start"])
+    dp.register_callback_query_handler(button)
+    dp.register_callback_query_handler(process_payment, pattern='.*')
 
-    # Устанавливаем Webhook
-    set_webhook()
+    # Запуск polling для бота
+    await dp.start_polling()
 
 if __name__ == '__main__':
-    main()
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))  # Запуск Flask
+    import asyncio
+    asyncio.run(main())
+
+    # Запуск Flask-приложения на порту 8080
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)))  # Запуск Flask
