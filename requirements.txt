@@ -3,3 +3,4 @@ aiohttp
 python-dotenv
 aiosqlite
 Flask
+telegram 
