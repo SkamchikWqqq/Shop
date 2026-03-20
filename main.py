@@ -1,26 +1,31 @@
 import os
-from flask import Flask, request
+from flask import Flask
 from threading import Thread
-import telegram
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
-import requests
 
-# Создаем экземпляр Flask-приложения
 app = Flask('')
-
-# URL Webhook для вашего сервера
-WEBHOOK_URL = 'https://your-app-name.onrender.com/webhook'  # Замените на ваш реальный URL
 
 @app.route('/')
 def home():
-    return "✅ Я онлайн!"  # Ответ для UptimeRobot и других сервисов мониторинга
+    return "✅ Я онлайн!"
 
 def run():
     port = int(os.environ.get("PORT", 8080))  # Получаем порт из переменной окружения
     app.run(host='0.0.0.0', port=port)  # Запускаем Flask на этом порту
 
-Thread(target=run).start()  # Запуск Flask в отдельном потоке
+Thread(target=run).start()
+import asyncio
+
+import aiosqlite
+
+from aiogram import Bot, Dispatcher, types, F
+
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
+
+from aiogram.filters import CommandStart
+
+from aiogram.fsm.state import State, StatesGroup
+
+from aiogram.fsm.context import FSMContext
 
 # Ваш Telegram-бот
 TOKEN = '8798655968:AAEGVzmu2RPbI2z6UqBeuUjZQWkTuWbzGqM'
